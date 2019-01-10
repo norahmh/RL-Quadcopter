@@ -28,18 +28,28 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        reward = 1 - 0.0003*(abs(self.sim.pose[:3] - self.target_pos)).sum()
+        #reward = 1 - 0.0003*(abs(self.sim.pose[:3] - self.target_pos)).sum()
+        #reward = np.tanh(reward)
+        #penalty=0
+        # extra penalty if the distance between current position and target position more than 50 height 
+        
+        reward=0
+        penalty=0
+        distance = np.sqrt((self.sim.pose[0]-self.target_pos[0])**2 + (self.sim.pose[1]-self.target_pos[1])**2 + (self.sim.pose[2]-self.target_pos[2])**2)
+        #if distance < 50:
+            #penalty = abs(self.target_pos[3:6]).sum()-abs(self.sim.pose[3:6]).sum()
+        
+        if self.sim.pose[2] > 0:
+            reward += 1
+            #penalty = distance*0.0003    #(self.sim.pose[2]-self.target_pos[2])**2
+        elif self.sim.pose[2] <= 50:
+            reward += -(distance*0.0003)
+        elif self.sim.pose[2] >= 100:
+            reward += 1  #((self.target_pos[2]-self.sim.pose[2])**2)
+        
         reward = np.tanh(reward)
         
-        penalty=0
-        
-        distance = np.sqrt((self.sim.pose[0]-self.target_pos[0])**2 + (self.sim.pose[1]-self.target_pos[1])**2 + (self.sim.pose[2]-self.target_pos[2])**2)
-        
-        # extra penalty if the distance between current position and target position more than 50 height 
-        if distance < 50:
-            penalty = abs(self.target_pos[3:6]).sum()-abs(self.sim.pose[3:6]).sum()
-            
-        return reward - penalty
+        return reward
 
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""
@@ -47,7 +57,7 @@ class Task():
         pose_all = []
         for _ in range(self.action_repeat):
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
-            reward += (self.get_reward()/2)
+            reward += self.get_reward()
             pose_all.append(self.sim.pose)
         next_state = np.concatenate(pose_all)
         return next_state, reward, done
